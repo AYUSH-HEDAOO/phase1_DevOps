@@ -1,0 +1,34 @@
+#base image 
+FROM node:20-alpine as build
+
+#make a directory 
+WORKDIR /app
+
+#copy the package file
+Copy ./package*.json ./
+
+#install dependencies
+RUN npm ci
+
+#copy project
+COPY . .
+
+#build the app
+RUN npm run build
+
+#production stage(distroless)
+FROM  gcr.io/distroless/java21-debian12
+
+#set working directory
+WORKDIR /app
+
+#copy built files and node_modules from build stage
+COPY --from=build /app/dist ./dist
+
+COPY --from=build /app/node_modules ./node_modules
+
+#expose port
+EXPOSE  3000
+
+#start the application
+CMD [ "./node_modules/.bin/serve", "-s", "dist", "-l", "3000" ]
